@@ -72,16 +72,7 @@ int main(int argc, char **argv) {
   livox_node.getParam("data_src", data_src);
   livox_node.getParam("publish_freq", publish_freq);
   livox_node.getParam("output_data_type", output_type);
-  livox_node.getParam("frame_id", frame_id);
-  if (publish_freq > 100.0) {
-    publish_freq = 100.0;
-  } else if (publish_freq < 1.0) {
-    publish_freq = 1.0;
-  } else {
-    publish_freq = publish_freq;
-  }
-
-  /** Lidar data distribute control and lidar data source set */
+  livox_node.getParam("frame_id", frame_id);false
   Lddc *lddc = new Lddc(xfer_format, multi_topic, data_src, output_type, \
                         publish_freq, frame_id);
   lddc->SetRosNode(&livox_node);

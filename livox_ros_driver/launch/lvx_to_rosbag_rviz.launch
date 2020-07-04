@@ -1,6 +1,6 @@
 <launch>
 
-	<arg name="lvx_file_path" default="livox_test.lvx"/>
+	<arg name="lvx_file_path" default="/home/wei/PolyExplore/Livox_Viewr_For_Linux_Ubuntu16.04_x64_0.7.0/data/record files/Horizon_道路场景点云数据_官网.lvx"/>
 	<arg name="bd_list" default="100000000000000"/>
 	<arg name="xfer_format" default="0"/>
 	<arg name="multi_topic" default="0"/>

@@ -204,7 +204,9 @@ uint32_t Lddc::PublishPointcloud2(LidarDataQueue *queue, uint32_t packet_num,
     if (kSourceLvxFile != data_source) {
       PointConvertHandler pf_point_convert =
           GetConvertHandler(lidar->raw_data_type);
+      ROS_INFO_ONCE("raw_data_type %u", lidar->raw_data_type);
       if (pf_point_convert) {
+        ROS_WARN_ONCE("Wei is here! Extrinsic %s\n", lidar->extrinsic_parameter.enable?"Yes":"No");
         point_base = pf_point_convert(
             point_base, raw_packet, lidar->extrinsic_parameter);
       } else {

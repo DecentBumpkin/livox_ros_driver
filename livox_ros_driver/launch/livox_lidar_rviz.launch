@@ -1,11 +1,11 @@
 <launch>
 
 	<arg name="lvx_file_path" default="livox_test.lvx"/>
-	<arg name="bd_list" default="100000000000000"/>
-	<arg name="xfer_format" default="0"/>
-	<arg name="multi_topic" default="0"/>
+	<arg name="bd_list" default="1HDDGC500101371"/>
+	<arg name="xfer_format" default="0" doc="commonly used"/>
+	<arg name="multi_topic" default="0" doc="commonly used"/>
 	<arg name="data_src" default="0"/>
-	<arg name="publish_freq" default="10.0"/>
+	<arg name="publish_freq" default="10.0" doc="commonly used"/>
 	<arg name="output_type" default="0"/>
 	<arg name="rviz_enable" default="true"/>
 	<arg name="rosbag_enable" default="false"/>

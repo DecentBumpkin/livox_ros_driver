@@ -252,16 +252,24 @@ uint8_t *LivoxExtendRawPointToPxyzrtl(uint8_t *point_buf,
   LivoxExtendRawPoint *raw_point =
       reinterpret_cast<LivoxExtendRawPoint *>(eth_packet->data);
 
+  // printf("raw point data: %d %d %d\n",raw_point->x, raw_point->y, raw_point->z);
+
   uint8_t line_id = 0;
   while (points_per_packet) {
-    RawPointConvert((LivoxPointXyzr *)dst_point, (LivoxRawPoint *)raw_point);
+    RawPointConvert((LivoxPointXyzr *)dst_point, (LivoxRawPoint *)raw_point); // polymorphism
+    // printf("Extrinsic %s\n",extrinsic.enable?"Enable":"Disabled");
     if (extrinsic.enable) {
+      // printf("extrinsic.enable\n");
       PointXyz src_point = *((PointXyz *)dst_point);
       PointExtrisincCompensation((PointXyz *)dst_point, src_point, extrinsic);
     }
     dst_point->tag = raw_point->tag;
     dst_point->line = line_id;
     dst_point->line = dst_point->line % 6;
+
+    // dst_point->x *= 20.0f;
+    // dst_point->y *= 20.0f;
+
     ++raw_point;
     ++dst_point;
     ++line_id;
