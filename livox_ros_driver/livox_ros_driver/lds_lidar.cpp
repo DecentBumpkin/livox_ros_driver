@@ -63,6 +63,7 @@ LdsLidar::~LdsLidar() {}
 
 void LdsLidar::ResetLdsLidar(void) { ResetLds(kSourceRawLidar); }
 
+/* Key Function called in lidar_ros_driver.cpp */
 int LdsLidar::InitLdsLidar(std::vector<std::string> &broadcast_code_strs,
                            const char *user_config_path) {
   if (is_initialized_) {
@@ -70,7 +71,7 @@ int LdsLidar::InitLdsLidar(std::vector<std::string> &broadcast_code_strs,
     return -1;
   }
 
-  if (!Init()) {
+  if (!Init()) { /* livox_sdk.h */
     Uninit();
     printf("Livox-SDK init fail!\n");
     return -1;
@@ -81,15 +82,15 @@ int LdsLidar::InitLdsLidar(std::vector<std::string> &broadcast_code_strs,
   printf("Livox SDK version %d.%d.%d\n", _sdkversion.major, _sdkversion.minor,
          _sdkversion.patch);
 
-  SetBroadcastCallback(OnDeviceBroadcast);
-  SetDeviceStateUpdateCallback(OnDeviceChange);
+  SetBroadcastCallback(OnDeviceBroadcast); /* key callback, level 1 */
+  SetDeviceStateUpdateCallback(OnDeviceChange); /*  */ 
 
   /** Add commandline input broadcast code */
   for (auto input_str : broadcast_code_strs) {
     AddBroadcastCodeToWhitelist(input_str.c_str());
   }
 
-  ParseConfigFile(user_config_path);
+  ParseConfigFile(user_config_path); /* parse lidar_config_file.json, see below */
 
   if (whitelist_count_) {
     DisableAutoConnectMode();
@@ -120,8 +121,8 @@ int LdsLidar::InitLdsLidar(std::vector<std::string> &broadcast_code_strs,
     timesync_->StartTimesync();
   }
 
-  /** Start livox sdk to receive lidar data */
-  if (!Start()) {
+  /** Start livox sdk to receive lidar data @Wei: Important! */
+  if (!Start()) { /* livox_sdk.cpp */
     Uninit();
     printf("Livox-SDK init fail!\n");
     return -1;
@@ -159,7 +160,7 @@ void LdsLidar::PrepareExit(void) { DeInitLdsLidar(); }
 /** Static function in LdsLidar for callback or event process
  * ------------------------------------*/
 
-/** Receiving point cloud data from Livox LiDAR. */
+/** Receiving point cloud data from Livox LiDAR. called in OnDeviceBroadcas */
 void LdsLidar::OnLidarDataCb(uint8_t handle, LivoxEthPacket *data,
                              uint32_t data_num, void *client_data) {
   using namespace std;
@@ -196,7 +197,7 @@ void LdsLidar::OnLidarDataCb(uint8_t handle, LivoxEthPacket *data,
     }
     packet_statistic->last_timestamp = cur_timestamp.stamp;
 
-    LidarDataQueue *p_queue = &p_lidar->data;
+    LidarDataQueue *p_queue = &p_lidar->data; /* Lidar data queue */
     if (nullptr == p_queue->storage_packet) {
       uint32_t queue_size = CalculatePacketQueueSize(lds_lidar->buffer_time_ms_,
                                                      eth_packet->data_type);
@@ -206,7 +207,7 @@ void LdsLidar::OnLidarDataCb(uint8_t handle, LivoxEthPacket *data,
              p_lidar->info.broadcast_code, queue_size, p_queue->size);
     }
 
-    if (!QueueIsFull(p_queue)) {
+    if (!QueueIsFull(p_queue)) {  /* @Wei Push the lidar eth_packet to LidarDataQueue: p_lidar->data */
       QueuePushAny(p_queue, (uint8_t *)eth_packet,
                    GetEthPacketLen(eth_packet->data_type),
                    packet_statistic->timebase,
@@ -226,7 +227,7 @@ void LdsLidar::OnLidarDataCb(uint8_t handle, LivoxEthPacket *data,
     }
     packet_statistic->last_imu_timestamp = cur_timestamp.stamp;
 
-    LidarDataQueue *p_queue = &p_lidar->imu_data;
+    LidarDataQueue *p_queue = &p_lidar->imu_data; /* Imu data queue */
     if (nullptr == p_queue->storage_packet) {
       uint32_t queue_size = 256;
       InitQueue(p_queue, queue_size);
@@ -234,7 +235,7 @@ void LdsLidar::OnLidarDataCb(uint8_t handle, LivoxEthPacket *data,
              p_lidar->info.broadcast_code, queue_size, p_queue->size);
     }
 
-    if (!QueueIsFull(p_queue)) {
+    if (!QueueIsFull(p_queue)) { /* @Wei: Push the Imu eth_packet to LidarDataQueue */
       QueuePushAny(p_queue, (uint8_t *)eth_packet,
                    GetEthPacketLen(eth_packet->data_type),
                    packet_statistic->timebase,
@@ -243,6 +244,7 @@ void LdsLidar::OnLidarDataCb(uint8_t handle, LivoxEthPacket *data,
   }
 }
 
+/* this function will call LdsLidar::OnLidarDataCb, called in InitLdsLidar */
 void LdsLidar::OnDeviceBroadcast(const BroadcastDeviceInfo *info) {
   if (info == nullptr) {
     return;
@@ -269,14 +271,14 @@ void LdsLidar::OnDeviceBroadcast(const BroadcastDeviceInfo *info) {
   uint8_t handle = 0;
   result = AddLidarToConnect(info->broadcast_code, &handle);
   if (result == kStatusSuccess && handle < kMaxLidarCount) {
-    SetDataCallback(handle, OnLidarDataCb, (void *)g_lds_ldiar);
+    SetDataCallback(handle, OnLidarDataCb, (void *)g_lds_ldiar); /* key data callback */
 
     LidarDevice *p_lidar = &(g_lds_ldiar->lidars_[handle]);
     p_lidar->handle = handle;
     p_lidar->connect_state = kConnectStateOff;
 
     UserRawConfig config;
-    if (g_lds_ldiar->GetRawConfig(info->broadcast_code, config)) {
+    if (g_lds_ldiar->GetRawConfig(info->broadcast_code, config)) { /* fetched the lidar condig */
       printf("Could not find raw config, set config to default!\n");
       config.enable_fan = 1;
       config.return_mode = kFirstReturn;
@@ -286,7 +288,7 @@ void LdsLidar::OnDeviceBroadcast(const BroadcastDeviceInfo *info) {
       config.enable_high_sensitivity = false;
     }
 
-    p_lidar->config.enable_fan = config.enable_fan;
+    p_lidar->config.enable_fan = config.enable_fan; /* set the device lidar config */
     p_lidar->config.return_mode = config.return_mode;
     p_lidar->config.coordinate = config.coordinate;
     p_lidar->config.imu_rate = config.imu_rate;
@@ -717,7 +719,7 @@ int LdsLidar::ParseTimesyncConfig(rapidjson::Document &doc) {
   return -1;
 }
 
-/** Config file process */
+/** @Wei very important, parse the json config file*/
 int LdsLidar::ParseConfigFile(const char *pathname) {
   FILE *raw_file = std::fopen(pathname, "rb");
   if (!raw_file) {
@@ -777,8 +779,8 @@ int LdsLidar::ParseConfigFile(const char *pathname) {
                 object["enable_high_sensitivity"].GetBool();
           }
 
-          printf("broadcast code[%s] : %d %d %d %d %d %d\n",
-                 config.broadcast_code, config.enable_connect,
+          printf("From LdsLidar::ParseConfigFile\nbroadcast code[%s] : %d %d %d %d %d %d\n",
+                 config.broadcam st_code, config.enable_connect,
                  config.enable_fan, config.return_mode, config.coordinate,
                  config.imu_rate, config.extrinsic_parameter_source);
           if (config.enable_connect) {

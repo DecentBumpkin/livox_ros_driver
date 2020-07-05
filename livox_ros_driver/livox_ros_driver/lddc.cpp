@@ -127,6 +127,7 @@ int32_t Lddc::GetPublishStartTime(LidarDevice *lidar, LidarDataQueue *queue,
   }
 }
 
+/* @Wei, penultimate level to publish the pointcloud from queue */
 uint32_t Lddc::PublishPointcloud2(LidarDataQueue *queue, uint32_t packet_num,
                                   uint8_t handle) {
   uint64_t timestamp = 0;
@@ -173,19 +174,19 @@ uint32_t Lddc::PublishPointcloud2(LidarDataQueue *queue, uint32_t packet_num,
   cloud.data.resize(packet_num * kMaxPointPerEthPacket *
                     sizeof(LivoxPointXyzrtl));
   cloud.point_step = sizeof(LivoxPointXyzrtl);
-  uint8_t *point_base = cloud.data.data();
+  uint8_t *point_base = cloud.data.data(); /* point to the front of cloud.data ? */
   uint8_t data_source = lidar->data_src;
   while ((published_packet < packet_num) && !QueueIsEmpty(queue)) {
     QueueProPop(queue, &storage_packet);
     LivoxEthPacket *raw_packet =
-        reinterpret_cast<LivoxEthPacket *>(storage_packet.raw_data);
+        reinterpret_cast<LivoxEthPacket *>(storage_packet.raw_data); /* From StoragePacket to LivoxEthPacket */
     timestamp = GetStoragePacketTimestamp(&storage_packet, data_source);
     int64_t packet_gap = timestamp - last_timestamp;
     if ((packet_gap > lidar->packet_interval_max) && 
         lidar->data_is_pubulished) {
       //ROS_INFO("Lidar[%d] packet time interval is %ldns", handle, packet_gap);
-      if (kSourceLvxFile != data_source) {
-        point_base = FillZeroPointXyzrtl(point_base, storage_packet.point_num);
+      if (kSourceLvxFile != data_source) { /* by default will enter this scope */
+        point_base = FillZeroPointXyzrtl(point_base, storage_packet.point_num); /* initialize the point_base to zero default */
         cloud.width += storage_packet.point_num;
         last_timestamp = last_timestamp + lidar->packet_interval;
         if (!published_packet) { 
@@ -201,14 +202,15 @@ uint32_t Lddc::PublishPointcloud2(LidarDataQueue *queue, uint32_t packet_num,
     }
     cloud.width += storage_packet.point_num;
 
-    if (kSourceLvxFile != data_source) {
-      PointConvertHandler pf_point_convert =
-          GetConvertHandler(lidar->raw_data_type);
+    if (kSourceLvxFile != data_source) { /* by default will enter this scope */
+      PointConvertHandler pf_point_convert = /*PointConvertHandler is a pointer to function, defined in lds.h */
+          GetConvertHandler(lidar->raw_data_type); /* defined in lds.cpp, by default leads to LivoxExtendRawPointToPxyzrtl in lds.cpp */
       ROS_INFO_ONCE("raw_data_type %u", lidar->raw_data_type);
+      /* extrinsic_paramter is set in LdsLidar::GetLidarExtrinsicParameterCb in lds_lidar.cpp*/
       if (pf_point_convert) {
         ROS_WARN_ONCE("Wei is here! Extrinsic %s\n", lidar->extrinsic_parameter.enable?"Yes":"No");
         point_base = pf_point_convert(
-            point_base, raw_packet, lidar->extrinsic_parameter);
+            point_base, raw_packet, lidar->extrinsic_parameter); /* convert LivoxEthPacket to point_base in the cloud.data, uint_8 * */
       } else {
         /** Skip the packet */
         ROS_INFO("Lidar[%d] unkown packet type[%d]", handle,
@@ -509,8 +511,9 @@ int Lddc::RegisterLds(Lds *lds) {
   }
 }
 
+/* @Wei key lidar pointcloud function called in DistributeLidarData */
 void Lddc::PollingLidarPointCloudData(uint8_t handle, LidarDevice *lidar) {
-  LidarDataQueue *p_queue = &lidar->data;
+  LidarDataQueue *p_queue = &lidar->data; /* fetch the lidar data queue generated in lds_lidar */
   if (p_queue == nullptr) {
     return;
   }
@@ -518,13 +521,13 @@ void Lddc::PollingLidarPointCloudData(uint8_t handle, LidarDevice *lidar) {
   while (!QueueIsEmpty(p_queue)) {
     uint32_t used_size = QueueUsedSize(p_queue);
     uint32_t onetime_publish_packets =
-        GetPacketNumPerSec(lidar->raw_data_type) / publish_frq_;
+        GetPacketNumPerSec(lidar->raw_data_type) / publish_frq_; /* number of packets published within each intervel */
     if (used_size < onetime_publish_packets) {
       break;
     }
 
-    if (kPointCloud2Msg == transfer_format_) {
-      PublishPointcloud2(p_queue, onetime_publish_packets, handle);
+    if (kPointCloud2Msg == transfer_format_) { /* by default the PointCloud2.msg */
+      PublishPointcloud2(p_queue, onetime_publish_packets, handle); /* finally publish from queue */
     } else if (kLivoxCustomMsg == transfer_format_) {
       PublishCustomPointcloud(p_queue, onetime_publish_packets, handle);
     } else if (kPclPxyziMsg == transfer_format_) {
@@ -533,6 +536,7 @@ void Lddc::PollingLidarPointCloudData(uint8_t handle, LidarDevice *lidar) {
   }
 }
 
+/* @Wei Imu function called in DistributeLidarData */
 void Lddc::PollingLidarImuData(uint8_t handle, LidarDevice *lidar) {
   LidarDataQueue *p_queue = &lidar->imu_data;
   if (p_queue == nullptr) {
@@ -544,6 +548,7 @@ void Lddc::PollingLidarImuData(uint8_t handle, LidarDevice *lidar) {
   }
 }
 
+/* @Wei Key key function in main loop, level 1 */
 void Lddc::DistributeLidarData(void) {
   if (lds_ == nullptr) {
     return;
@@ -552,7 +557,7 @@ void Lddc::DistributeLidarData(void) {
   for (uint32_t i = 0; i < lds_->lidar_count_; i++) {
     uint32_t lidar_id = i;
     LidarDevice *lidar = &lds_->lidars_[lidar_id];
-    LidarDataQueue *p_queue = &lidar->data;
+    LidarDataQueue *p_queue = &lidar->data; /* lidar data queue converted from eth_packed in lds_lidar.cpp */
     if ((kConnectStateSampling != lidar->connect_state) ||
         (p_queue == nullptr)) {
       continue;

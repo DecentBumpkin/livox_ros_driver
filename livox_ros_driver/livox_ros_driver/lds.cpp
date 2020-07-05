@@ -244,19 +244,20 @@ uint8_t *LivoxSpherPointToPxyzrtl(uint8_t *point_buf,
   return (uint8_t *)dst_point;
 }
 
+/* default convert handler based on default data type*/
 uint8_t *LivoxExtendRawPointToPxyzrtl(uint8_t *point_buf,
                                       LivoxEthPacket *eth_packet,
                                       ExtrinsicParameter &extrinsic) {
   LivoxPointXyzrtl *dst_point = (LivoxPointXyzrtl *)point_buf;
   uint32_t points_per_packet = GetPointsPerPacket(eth_packet->data_type);
   LivoxExtendRawPoint *raw_point =
-      reinterpret_cast<LivoxExtendRawPoint *>(eth_packet->data);
+      reinterpret_cast<LivoxExtendRawPoint *>(eth_packet->data); /* from LivoxEthPacket to LivoxExtendRawPoint */
 
   // printf("raw point data: %d %d %d\n",raw_point->x, raw_point->y, raw_point->z);
 
   uint8_t line_id = 0;
   while (points_per_packet) {
-    RawPointConvert((LivoxPointXyzr *)dst_point, (LivoxRawPoint *)raw_point); // polymorphism
+    RawPointConvert((LivoxPointXyzr *)dst_point, (LivoxRawPoint *)raw_point); /* polymorphism, defined in lds.h, convert from mm to m */
     // printf("Extrinsic %s\n",extrinsic.enable?"Enable":"Disabled");
     if (extrinsic.enable) {
       // printf("extrinsic.enable\n");
@@ -381,12 +382,13 @@ uint8_t *LivoxImuDataProcess(uint8_t *point_buf, LivoxEthPacket *eth_packet) {
 const PointConvertHandler to_pxyzi_handler_table[kMaxPointDataType] = {
     LivoxRawPointToPxyzrtl,
     LivoxSpherPointToPxyzrtl,
-    LivoxExtendRawPointToPxyzrtl,
+    LivoxExtendRawPointToPxyzrtl, /* default */
     LivoxExtendSpherPointToPxyzrtl,
     LivoxDualExtendRawPointToPxyzrtl,
     LivoxDualExtendSpherPointToPxyzrtl,
     nullptr};
 
+/* get the coverter handler based on data type, default data type is 2, ExtendedRawPoint*/
 PointConvertHandler GetConvertHandler(uint8_t data_type) {
   if (data_type < kMaxPointDataType)
     return to_pxyzi_handler_table[data_type];
