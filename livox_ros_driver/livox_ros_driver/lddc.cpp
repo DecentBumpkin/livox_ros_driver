@@ -175,6 +175,10 @@ uint32_t Lddc::PublishPointcloud2(LidarDataQueue *queue, uint32_t packet_num,
                     sizeof(LivoxPointXyzrtl));
   cloud.point_step = sizeof(LivoxPointXyzrtl);
   uint8_t *point_base = cloud.data.data(); /* point to the front of cloud.data ? */
+  /* point_base is the final usefull data, first you need to
+  create and allocate memory for point_base, also called point_dst, in this case
+  the pointcloud2d's data, then use the lds.cpp defined LivoxExtendRawPointToPxyzrtl to convert from
+  raw and copy into point_base */
   uint8_t data_source = lidar->data_src;
   while ((published_packet < packet_num) && !QueueIsEmpty(queue)) {
     QueueProPop(queue, &storage_packet);

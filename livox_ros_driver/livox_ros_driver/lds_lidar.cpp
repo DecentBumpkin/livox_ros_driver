@@ -780,7 +780,7 @@ int LdsLidar::ParseConfigFile(const char *pathname) {
           }
 
           printf("From LdsLidar::ParseConfigFile\nbroadcast code[%s] : %d %d %d %d %d %d\n",
-                 config.broadcam st_code, config.enable_connect,
+                 config.broadcast_code, config.enable_connect,
                  config.enable_fan, config.return_mode, config.coordinate,
                  config.imu_rate, config.extrinsic_parameter_source);
           if (config.enable_connect) {
